@@ -97,9 +97,6 @@
   const fontImg = new Image();
   fontImg.src = 'https://dodo.ac/np/images/8/8a/Animal_Crossing_PAL_Font.svg';
 
-  // Map between item name (string) and id (number)
-  const item_map = new Map();
-
   // Currently selected canvas "textbox" info
   var selected_box = null;
   var selected_buf = null;
@@ -555,18 +552,21 @@
         return;
       }
 
-      var item_name;
       var item_id = undefined;
       if (code_type == CODE_TYPES.Famicom) {
         item_id = Number('0x' + document.getElementById('nesSelect').value);
       } else {
-        item_name = item_combobox.value;
-        // Check if the item name field was set
-        if (!item_name) {
+        const value = item_combobox.value;
+        const matched = value.match(/\[(\d+)\]/);
+
+        // Check if the item id is set
+        if (!matched) {
           alert('You must select an item before generating a password!');
           return;
         }
-        item_id = item_map.get(item_name);
+
+        const [_, item_id_number] = matched;
+        item_id = Number('0x' + item_id_number);
       }
 
       // Check if the item name supplied is valid
@@ -683,20 +683,20 @@
                 const options = [];
 
                 for (var i = 0; i < item_data_array.length; i++) {
-                  const id = Number('0x' + item_data_array[i].id);
-
-                  // Set the name-id pair in the item map
-                  item_map.set(item_data_array[i].name, id);
-                  options.push({ data: item_data_array[i].name });
+                  const { id, name } = item_data_array[i];
+                  options.push({
+                    data: `${name} [${id}]`,
+                  });
                 }
 
                 // Create our searchable item list combobox
                 item_combobox = new OO.ui.ComboBoxInputWidget({
-                  value: 'spooky wardrobe',
+                  value: 'spooky wardrobe [1000]',
                   autocomplete: true,
                   options: options,
                   menu: {
                     filterFromInput: true,
+                    filterMode: 'substring',
                   },
                 });
 
