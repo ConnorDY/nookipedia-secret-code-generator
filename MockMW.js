@@ -9,7 +9,7 @@ var mw = {
         .replace(/\&ctype\=.*\&action\=raw/gm, '');
       console.log('Loading script from:', newUrl);
 
-      const dataType = newUrl.includes('.json') ? 'json' : 'script';
+      const dataType = newUrl.includes('.json') ? 'text' : 'script';
 
       return $.ajax(newUrl, { dataType, cache: !0 }).catch(function () {
         throw new Error('Failed to load script');
