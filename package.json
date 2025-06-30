@@ -1,0 +1,17 @@
+{
+  "name": "nookipedia-secret-code-generator",
+  "version": "1.0.0",
+  "description": "",
+  "license": "CC-BY-SA-3.0",
+  "author": "Cuyler",
+  "main": "Runtime.js",
+  "scripts": {
+    "dev": "http-server ./"
+  },
+  "devDependencies": {
+    "http-server": "^14.1.1"
+  },
+  "dependencies": {
+    "oojs-ui": "^0.52.0"
+  }
+}
