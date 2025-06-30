@@ -1,4 +1,4 @@
-# Nookipedia Secret code generator and decoder for Animal Crossing
+# Nookipedia Secret code generator for Animal Crossing
 
 This repo contains a standalone copy of the Secret code generator from Nookipedia found [here](https://nookipedia.com/wiki/Secret_code/Generator).
 
