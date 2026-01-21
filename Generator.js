@@ -22,7 +22,7 @@ const PASSWORD_DATA_SIZE = 21;
 
 /* Password string length. Works out to 28 characters */
 const PASSWORD_STR_SIZE = Math.floor(
-  (PASSWORD_DATA_SIZE * PASSWORD_DATA_BITS) / PASSWORD_CHAR_BITS
+  (PASSWORD_DATA_SIZE * PASSWORD_DATA_BITS) / PASSWORD_CHAR_BITS,
 );
 
 /* Index of byte used for code scrambling */
@@ -395,8 +395,8 @@ const transposition_cipher_char1_table = [
   'TimOLeary', // Localization Manager & Translator @ Nintendo of America https://nintendo.fandom.com/wiki/Tim_O%27Leary
   'BillTrinen', // Senior Product Marketing Manager, Translator, & Interpreter @ Nintendo of America https://en.wikipedia.org/wiki/Bill_Trinen
   'nAkAyOsInoNyuuSankin', // Translates to "good bacteria" (善玉菌)
-  'zendamaKINAKUDAMAkin', // Translates to "bad bacteria" (悪玉菌)
-  'OishikutetUYOKUNARU', // Translates to "It's becoming really delicious." "It's becoming strongly delicious."
+  'zendamaKINAKUDAMakin', // Translates to "bad bacteria" (悪玉菌)
+  'OishikuteTUYOKUNARU', // Translates to "It's becoming really delicious." "It's becoming strongly delicious."
   'AsetoAminofen', // Translates to Acetaminophen. Like the drug.
   'fcSFCn64GCgbCGBagbVB', // fc = Famicom | SFC = Super Famicom | n64 = Nintendo 64 | GC = GameCube | gb = GameBoy | CGB = GameBoy Color | agb = GameBoy Advance | VB = Virtual Boy
   'YossyIsland', // Yoshi's Island. The game.
@@ -442,7 +442,7 @@ function Change8BitsCode(password) {
       const idx = i * PASSWORD_DATA_BITS + j;
       byte |=
         ((password[Math.floor(idx / PASSWORD_CHAR_BITS)] >>
-          idx % PASSWORD_CHAR_BITS) &
+          (idx % PASSWORD_CHAR_BITS)) &
           1) <<
         j;
     }
@@ -656,7 +656,7 @@ function MakePasscode(
   str1,
   item_id,
   npc_type,
-  npc_code
+  npc_code,
 ) {
   const data = new Uint8Array(PASSWORD_DATA_SIZE);
   npc_code &= 0xff;
@@ -720,7 +720,7 @@ function MakePasscode(
     checksum += data[10 + i];
   }
 
-  checksum += item_id & 0xff;
+  checksum += item_id;
   checksum += npc_code;
   data[0] |= (checksum & 3) << 3;
 
@@ -832,9 +832,9 @@ function Change6BitsCode(data) {
   var code = 0;
   for (var i = 0; i < PASSWORD_STR_SIZE * PASSWORD_CHAR_BITS; i++) {
     code |=
-      ((data[Math.floor(i / PASSWORD_DATA_BITS)] >> i % PASSWORD_DATA_BITS) &
+      ((data[Math.floor(i / PASSWORD_DATA_BITS)] >> (i % PASSWORD_DATA_BITS)) &
         1) <<
-      i % PASSWORD_CHAR_BITS;
+      (i % PASSWORD_CHAR_BITS);
 
     if (i % PASSWORD_CHAR_BITS == PASSWORD_CHAR_BITS - 1) {
       password_data[Math.floor(i / PASSWORD_CHAR_BITS)] = code & 0xff;
@@ -873,7 +873,7 @@ function MakePassword(
   str1,
   item_id,
   npc_type,
-  npc_code
+  npc_code,
 ) {
   var data = MakePasscode(
     code_type,
@@ -882,23 +882,15 @@ function MakePassword(
     Uint8Array2ACBytes(str1),
     item_id,
     npc_type,
-    npc_code
+    npc_code,
   );
-  //console.log(`MakePasscode: ${data}`);
   EncodeSubstitutionCipher(data);
-  //console.log(`EncodeSubstitutionCipher: ${data}`);
   TranspositionCipher(data, true, 0);
-  //console.log(`TranspositionCipher: ${data}`);
   EncodeBitShuffle(data, 0);
-  //console.log(`EncodeBitShuffle: ${data}`);
   EncodeChangeRSACipher(data);
-  //console.log(`EncodeChangeRSACipher: ${data}`);
   EncodeBitMixCode(data);
-  //console.log(`EncodeBitMixCode: ${data}`);
   EncodeBitShuffle(data, 1);
-  //console.log(`EncodeBitShuffle: ${data}`);
   TranspositionCipher(data, false, 1);
-  //console.log(`TranspositionCipher: ${data}`);
 
   return ChangeCommonFontCode_Uint8Array(Change6BitsCode(data));
 }
@@ -928,7 +920,7 @@ function ChangePasswordFontCode(password) {
   var data = new Uint8Array(password.length);
   for (var i = 0; i < password.length; i++) {
     var font_code = ChangePasswordFontCodeSubroutine(
-      character_map.indexOf(password.charAt(i))
+      character_map.indexOf(password.charAt(i)),
     );
     if (font_code == 0xff) {
       throw 'Invalid character in password!';

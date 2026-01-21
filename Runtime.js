@@ -225,7 +225,7 @@
       x * char_width,
       y * char_height + 2,
       char_width,
-      char_height - 4
+      char_height - 4,
     );
   }
 
@@ -304,11 +304,11 @@
   function toggleVillagerInfo(enabled) {
     const villagerSelect = document.getElementById('villagerSelect');
     const specialVillagerSelect = document.getElementById(
-      'specialVillagerSelect'
+      'specialVillagerSelect',
     );
     const villagerHeader = document.getElementById('villagerHeader');
     const specialVillagerHeader = document.getElementById(
-      'specialVillagerHeader'
+      'specialVillagerHeader',
     );
     const toggle = document.getElementById('specialToggle');
     const specialToggleHeader = document.getElementById('specialToggleHeader');
@@ -362,7 +362,7 @@
         setStr0Text('Player Name (String #1)');
         setStr1Text('Town Name (String #2)');
         setCodeTypeInfoText(
-          'This code can be told to Tom Nook or mailed to any villager in town.'
+          'This code can be told to Tom Nook or mailed to any villager in town.',
         );
         toggleMagazineWinRate(false);
         toggleCardENESRate(false);
@@ -374,7 +374,7 @@
         setStr0Text('Player Name (String #1)');
         setStr1Text('Town Name (String #2)');
         setCodeTypeInfoText(
-          'This code can be told to Tom Nook or mailed to any villager in town.'
+          'This code can be told to Tom Nook or mailed to any villager in town.',
         );
         toggleMagazineWinRate(false);
         toggleCardENESRate(false);
@@ -386,7 +386,7 @@
         setStr0Text('Custom Phrase (Last 8 characters)');
         setStr1Text('Custom Phrase (First 8 characters)');
         setCodeTypeInfoText(
-          'This code only be mailed to a villager in town. Mailing it to the villager embedded in the code will give you the selected % chance to receive a NES game.'
+          'This code only be mailed to a villager in town. Mailing it to the villager embedded in the code will give you the selected % chance to receive a NES game.',
         );
         toggleMagazineWinRate(false);
         toggleCardENESRate(true);
@@ -398,7 +398,7 @@
         setStr0Text('Magazine Name (Last 8 characters)');
         setStr1Text('Magazine Name (First 8 characters)');
         setCodeTypeInfoText(
-          'This code can be told to Tom Nook or mailed to any villager in town.'
+          'This code can be told to Tom Nook or mailed to any villager in town.',
         );
         toggleMagazineWinRate(true);
         toggleCardENESRate(false);
@@ -432,16 +432,176 @@
   }
 
   function init() {
+    // Define elements up front so they are accessible to the global listeners
     const codetype_select = document.getElementById('codetype');
+    const nameCanvas = document.getElementById('nameCanvas');
+    const townCanvas = document.getElementById('townCanvas');
+    const generatorInputCanvas = document.getElementById('generatorCanvas');
+    const passwordCanvas = document.getElementById('outPwdCanvas');
+    const genButton = document.getElementById('genButton');
+
     codetype_select.addEventListener('change', onCodeTypeChanged);
 
-    var nameCanvas = document.getElementById('nameCanvas');
-    nameCanvas.getContext('2d').canvas.width = nameCanvas.offsetWidth; // sync canvas width with element width
+    document.addEventListener('mousedown', function (e) {
+      if (
+        selected_box &&
+        e.target !== nameCanvas &&
+        e.target !== townCanvas &&
+        e.target !== generatorInputCanvas
+      ) {
+        // Clear the visual yellow highlight
+        clearCanvas(selected_box);
+        drawStringToCanvas(
+          selected_buf,
+          selected_box,
+          selected_box_cols,
+          selected_box_rows,
+        );
+
+        // Nullify selection so keyboard input stops being trapped
+        selected_box = null;
+        selected_buf = null;
+      }
+    });
+
+    document.addEventListener('keydown', function (e) {
+      // If no canvas is selected, do nothing
+      if (!selected_box) return;
+
+      // Handle TAB: Toggle between Name and Town
+      if (e.key === 'Tab') {
+        e.preventDefault();
+
+        // Clear highlight on current box
+        clearCanvas(selected_box);
+        drawStringToCanvas(
+          selected_buf,
+          selected_box,
+          selected_box_cols,
+          selected_box_rows,
+        );
+
+        // Swap Selection
+        if (selected_box === nameCanvas) {
+          selected_box = townCanvas;
+          selected_buf = townBytes;
+        } else {
+          selected_box = nameCanvas;
+          selected_buf = nameBytes;
+        }
+
+        // Reset cursor to the start of the new box
+        selected_box_char_idx = 0;
+        selected_box_cols = 8;
+        selected_box_rows = 1;
+
+        // Highlight the new box
+        highlightSelectedCharacter(
+          selected_box,
+          selected_box_rows,
+          selected_box_cols,
+        );
+        return;
+      }
+
+      // Handle ARROW LEFT
+      if (e.key === 'ArrowLeft') {
+        e.preventDefault();
+        if (selected_box_char_idx > 0) {
+          selected_box_char_idx--;
+          clearCanvas(selected_box);
+          highlightSelectedCharacter(
+            selected_box,
+            selected_box_rows,
+            selected_box_cols,
+          );
+          drawStringToCanvas(
+            selected_buf,
+            selected_box,
+            selected_box_cols,
+            selected_box_rows,
+          );
+        }
+        return;
+      }
+
+      // Handle ARROW RIGHT
+      if (e.key === 'ArrowRight') {
+        e.preventDefault();
+        const max = selected_box_rows * selected_box_cols - 1;
+        if (selected_box_char_idx < max) {
+          selected_box_char_idx++;
+          clearCanvas(selected_box);
+          highlightSelectedCharacter(
+            selected_box,
+            selected_box_rows,
+            selected_box_cols,
+          );
+          drawStringToCanvas(
+            selected_buf,
+            selected_box,
+            selected_box_cols,
+            selected_box_rows,
+          );
+        }
+        return;
+      }
+
+      // Handle BACKSPACE: Delete character
+      if (e.key === 'Backspace') {
+        e.preventDefault();
+        if (selected_box_char_idx > 0) {
+          selected_box_char_idx--;
+          selected_buf[selected_box_char_idx] = 0x20; // 0x20 is Space
+
+          clearCanvas(selected_box);
+          highlightSelectedCharacter(
+            selected_box,
+            selected_box_rows,
+            selected_box_cols,
+          );
+          drawStringToCanvas(
+            selected_buf,
+            selected_box,
+            selected_box_cols,
+            selected_box_rows,
+          );
+        }
+        return;
+      }
+
+      // Handle TEXT INPUT
+      if (e.key.length === 1) {
+        const charCode = character_map.indexOf(e.key);
+        if (charCode !== -1) {
+          e.preventDefault();
+          addCharacterToBuffer(selected_buf, selected_box_char_idx, charCode);
+
+          clearCanvas(selected_box);
+          highlightSelectedCharacter(
+            selected_box,
+            selected_box_rows,
+            selected_box_cols,
+          );
+          drawStringToCanvas(
+            selected_buf,
+            selected_box,
+            selected_box_cols,
+            selected_box_rows,
+          );
+        }
+      }
+    });
+
+    // --- Canvas Specific Listeners ---
+
+    // Player Name Canvas
+    nameCanvas.getContext('2d').canvas.width = nameCanvas.offsetWidth;
     nameCanvas.addEventListener('mousemove', function (e) {
       clearCanvas(nameCanvas);
       highlightSelectedCharacter(nameCanvas, 1, 8);
       drawStringToCanvas(nameBytes, nameCanvas, 8, 1);
-      highlightCurrentCharacter(nameCanvas, e, 1, PARAM_STRING_SIZE);
+      highlightCurrentCharacter(nameCanvas, e, 1, 8);
     });
     nameCanvas.addEventListener('mouseout', function () {
       clearCanvas(nameCanvas);
@@ -453,16 +613,16 @@
       canvasSetCharacterPos(nameCanvas, nameBytes, e, 8, 1);
       highlightSelectedCharacter(nameCanvas, 1, 8);
       drawStringToCanvas(nameBytes, nameCanvas, 8, 1);
-      highlightCurrentCharacter(nameCanvas, e, 1, PARAM_STRING_SIZE);
+      highlightCurrentCharacter(nameCanvas, e, 1, 8);
     });
 
-    var townCanvas = document.getElementById('townCanvas');
-    townCanvas.getContext('2d').canvas.width = townCanvas.offsetWidth; // sync canvas width with element width
+    // Town Name Canvas
+    townCanvas.getContext('2d').canvas.width = townCanvas.offsetWidth;
     townCanvas.addEventListener('mousemove', function (e) {
       clearCanvas(townCanvas);
       highlightSelectedCharacter(townCanvas, 1, 8);
       drawStringToCanvas(townBytes, townCanvas, 8, 1);
-      highlightCurrentCharacter(townCanvas, e, 1, PARAM_STRING_SIZE);
+      highlightCurrentCharacter(townCanvas, e, 1, 8);
     });
     townCanvas.addEventListener('mouseout', function () {
       clearCanvas(townCanvas);
@@ -474,12 +634,12 @@
       canvasSetCharacterPos(townCanvas, townBytes, e, 8, 1);
       highlightSelectedCharacter(townCanvas, 1, 8);
       drawStringToCanvas(townBytes, townCanvas, 8, 1);
-      highlightCurrentCharacter(townCanvas, e, 1, PARAM_STRING_SIZE);
+      highlightCurrentCharacter(townCanvas, e, 1, 8);
     });
 
-    var generatorInputCanvas = document.getElementById('generatorCanvas');
+    // Generator Input (Font Sheet) Canvas
     generatorInputCanvas.getContext('2d').canvas.width =
-      generatorInputCanvas.offsetWidth; // sync canvas width with element width
+      generatorInputCanvas.offsetWidth;
     generatorInputCanvas.getContext('2d').canvas.height =
       generatorInputCanvas.offsetHeight;
     generatorInputCanvas.addEventListener('mousemove', function (e) {
@@ -493,7 +653,7 @@
           0,
           0,
           generatorInputCanvas.width,
-          generatorInputCanvas.height
+          generatorInputCanvas.height,
         );
     });
     generatorInputCanvas.addEventListener('mousedown', function (e) {
@@ -503,24 +663,25 @@
       highlightSelectedCharacter(
         selected_box,
         selected_box_rows,
-        selected_box_cols
+        selected_box_cols,
       );
       drawStringToCanvas(
         selected_buf,
         selected_box,
         selected_box_cols,
-        selected_box_rows
+        selected_box_rows,
       );
     });
 
+    // Toggle Handlers
     document.getElementById('specialToggle').addEventListener('change', (e) => {
       const villagerSelect = document.getElementById('villagerSelect');
       const specialVillagerSelect = document.getElementById(
-        'specialVillagerSelect'
+        'specialVillagerSelect',
       );
       const villagerHeader = document.getElementById('villagerHeader');
       const specialVillagerHeader = document.getElementById(
-        'specialVillagerHeader'
+        'specialVillagerHeader',
       );
       if (e.currentTarget.checked) {
         villagerSelect.style.display = 'none';
@@ -535,11 +696,10 @@
       }
     });
 
-    const passwordCanvas = document.getElementById('outPwdCanvas');
-    passwordCanvas.getContext('2d').canvas.width = passwordCanvas.offsetWidth; // sync canvas width with element width
+    passwordCanvas.getContext('2d').canvas.width = passwordCanvas.offsetWidth;
     passwordCanvas.getContext('2d').canvas.height = passwordCanvas.offsetHeight;
 
-    const genButton = document.getElementById('genButton');
+    // Generate Button
     genButton.addEventListener('click', function () {
       const codetype_select = document.getElementById('codetype');
       const code_type = Number(codetype_select.value);
@@ -552,6 +712,7 @@
         return;
       }
 
+      var item_name;
       var item_id = undefined;
       if (code_type == CODE_TYPES.Famicom) {
         item_id = Number('0x' + document.getElementById('nesSelect').value);
@@ -569,15 +730,13 @@
         item_id = Number('0x' + item_id_number);
       }
 
-      // Check if the item name supplied is valid
       if (item_id === undefined) {
         alert(
-          'Unknown item selected! Please use the auto-complete list to select a valid item for this password!'
+          'Unknown item selected! Please use the auto-complete list to select a valid item for this password!',
         );
         return;
       }
 
-      // Get "hit rate" for whichever code type
       var hitrate = 0;
       if (code_type == CODE_TYPES.Magazine) {
         hitrate = Number(document.getElementById('hitrateSelect').value) ?? 0;
@@ -586,14 +745,13 @@
           Number(document.getElementById('cardeHitrateSelect').value) ?? 0;
       }
 
-      // Get villager
       var npcCode = 0;
       var npcType = 0;
       if (code_type == CODE_TYPES.Popular || code_type == CODE_TYPES.CardE) {
         if (document.getElementById('specialToggle').checked) {
           npcType = 1;
           npcCode = document.getElementById(
-            'specialVillagerSelect'
+            'specialVillagerSelect',
           ).selectedIndex;
         } else {
           npcCode = document.getElementById('villagerSelect').selectedIndex;
@@ -604,7 +762,6 @@
         }
       }
 
-      // Generate password & update password canvas
       passwordBuffer = MakePassword(
         code_type,
         hitrate,
@@ -612,17 +769,18 @@
         townBytes,
         item_id,
         npcType,
-        npcCode
+        npcCode,
       );
       clearCanvas(passwordCanvas);
       drawStringToCanvas(passwordBuffer, passwordCanvas, 14, 2);
 
       const password_text = ConvertBytesToUnicodeString(passwordBuffer);
       $('#plaintext').html(
-        password_text.slice(0, 14) + '<br>' + password_text.slice(14)
+        password_text.slice(0, 14) + '<br>' + password_text.slice(14),
       );
     });
 
+    // Default Selection: Player Name
     selected_box = nameCanvas;
     selected_buf = nameBytes;
     selected_box_cols = 8;
@@ -637,7 +795,7 @@
     // Load the generator/decoder
     mw.loader
       .getScript(
-        'https://nookipedia.com/w/index.php?title=MediaWiki:Gadget-PasswordGenerator/Generator.js&ctype=text/javascript&action=raw'
+        'https://nookipedia.com/w/index.php?title=MediaWiki:Gadget-PasswordGenerator/Generator.js&ctype=text/javascript&action=raw',
       )
       .fail(function (err) {
         console.log('Error loading AC Password script: ' + err.message);
@@ -646,7 +804,7 @@
         // Load the villager database next
         mw.loader
           .getScript(
-            'https://nookipedia.com/w/index.php?title=MediaWiki:Gadget-PasswordGenerator/ACVillagerDatabase.json&ctype=application/json&action=raw'
+            'https://nookipedia.com/w/index.php?title=MediaWiki:Gadget-PasswordGenerator/ACVillagerDatabase.json&ctype=application/json&action=raw',
           )
           .fail(function (err) {
             console.log('Error loading AC villager database: ' + err.message);
@@ -655,25 +813,25 @@
             const info = JSON.parse(data);
             const villagerSelect = document.getElementById('villagerSelect');
             const specialVillagerSelect = document.getElementById(
-              'specialVillagerSelect'
+              'specialVillagerSelect',
             );
 
             for (var i = 0; i < info.villagers.length; i++) {
               villagerSelect.appendChild(
-                new Option(info.villagers[i].name, info.villagers[i].name)
+                new Option(info.villagers[i].name, info.villagers[i].name),
               );
             }
 
             for (var i = 0; i < info.special.length; i++) {
               specialVillagerSelect.appendChild(
-                new Option(info.special[i].name, info.special[i].name)
+                new Option(info.special[i].name, info.special[i].name),
               );
             }
 
             // Load the item list
             mw.loader
               .getScript(
-                'https://nookipedia.com/w/index.php?title=MediaWiki:Gadget-PasswordGenerator/ACItemDatabase.json&ctype=application/json&action=raw'
+                'https://nookipedia.com/w/index.php?title=MediaWiki:Gadget-PasswordGenerator/ACItemDatabase.json&ctype=application/json&action=raw',
               )
               .fail(function (err) {
                 console.log('Error loading AC item database: ' + err.message);
@@ -684,9 +842,8 @@
 
                 for (var i = 0; i < item_data_array.length; i++) {
                   const { id, name } = item_data_array[i];
-                  options.push({
-                    data: `${name} [${id}]`,
-                  });
+
+                  options.push({ data: `${name} [${id}]` });
                 }
 
                 // Create our searchable item list combobox
