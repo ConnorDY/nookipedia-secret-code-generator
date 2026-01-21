@@ -557,7 +557,7 @@
         item_id = Number('0x' + document.getElementById('nesSelect').value);
       } else {
         const value = item_combobox.value;
-        const matched = value.match(/\[(\d+)\]/);
+        const matched = value.match(/\[([0-9A-Fa-f]+)\]/);
 
         // Check if the item id is set
         if (!matched) {
